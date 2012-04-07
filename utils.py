@@ -1,17 +1,18 @@
 import boto, os, time
 
 
-def create_key_pair(name):
+def create_key_pair(name, location):
+  """ location example: '/home/matt/.ssh' """
   ec2 = boto.connect_ec2()
   key_pair = ec2.create_key_pair(name)
-  key_pair.save('/home/matt/.ssh')
+  key_pair.save(location)
 
 
 def connect_ec2():
   return boto.connect_ec2()
 
 
-def launch_instance(ec2, key_pair_name, security_group_name='makaidjango',
+def launch_instance(ec2, key_pair_name, security_group_name='mcserver',
     ssh_port=22, cidr='0.0.0.0/0'):
 
   try:
@@ -19,7 +20,7 @@ def launch_instance(ec2, key_pair_name, security_group_name='makaidjango',
   except ec2.ResponseError, e:
     if e.code == 'InvalidGroup.NotFound':
       group = ec2.create_security_group(security_group_name, 
-        'Django security group.')
+        'Minecraft security group.')
       group.authorize('tcp', ssh_port, ssh_port, cidr)
     else:
       raise
@@ -30,31 +31,3 @@ def launch_instance(ec2, key_pair_name, security_group_name='makaidjango',
   instance = reservation.instances[0]
   return instance
 
-
-def bucket_byte_size(bucket_name):
-  s3 = boto.connect_s3()
-  total_bytes = 0
-  bucket = s3.lookup(bucket_name)
-  if bucket:
-    for key in bucket:
-      total_bytes += key.size
-  else:
-    print 'Warning: bucket %s was not found!' % bucket_name
-  return total_bytes
-
-
-def upload_to_s3(bucket_name, website_dir, index_file, error_file=None):
-  """This code is by Mitch Garnaat in Python & AWS Cookbook - an
-  amazing reference for boto and AWS!"""
-  s3 = boto.connect_s3()
-  bucket = s3.lookup(bucket_name)
-  bucket.set_canned_acl('public-read')
-  for root, dirs, files in os.walk(website_dir):
-    for file in files:
-      full_path = os.path.join(root, file)
-      rel_path = os.path.relpath(full_path, website_dir)
-      print 'Uploading %s as %s' % (full_path, rel_path)
-      key = bucket.new_key(rel_path)
-      key.content_type = 'text/html'
-      key.set_contents_from_filename(full_path, policy='public-read')
-  bucket.configure_website(index_file, error_file)
