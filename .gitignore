@@ -1,0 +1,10 @@
+mcvenv
+bin
+build
+include
+*.pyc
+**/*.pyc
+.Python
+*.class
+**/*.class
+\.*.swp
